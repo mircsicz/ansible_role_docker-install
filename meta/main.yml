@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  role_name: docker_install
+  author: Mirco Schmidt
+  description: Installs Docker and the Docker Compose plugin on Ubuntu servers.
+  company: JuMiLove
+  license: MIT
+  min_ansible_version: '2.10'
+
+  platforms:
+    - name: Ubuntu
+      versions:
+        - focal
+        - jammy
+        - noble
+
+dependencies: []

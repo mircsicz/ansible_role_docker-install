@@ -1,0 +1,82 @@
+---
+- name: Install Docker prerequisite packages
+  apt:
+    name: "{{ item }}"
+    state: present
+    update_cache: yes
+  loop:
+    - apt-transport-https
+    - ca-certificates
+    - vim-nox
+    - curl
+    - software-properties-common
+  tags:
+    - docker
+
+- name: Add Docker signing key (GPG)
+  get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/keyrings/docker.asc
+    mode: '0644'
+    force: true
+  tags:
+    - docker
+
+- name: Add Docker repository
+  apt_repository:
+    repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable
+    state: present
+  tags:
+    - docker
+
+- name: Update apt package cache
+  apt:
+    update_cache: yes
+  tags:
+    - docker
+
+- name: Install Docker Engine, CLI, Containerd, and Compose plugin
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
+  notify: Restart Docker
+  tags:
+    - docker
+
+- name: Add 'ansible' user to 'docker' group
+  user:
+    name: "ansible"
+    groups: "docker"
+    append: yes
+  tags:
+    - docker
+
+- name: Validate Docker is installed and running
+  command: docker info
+  register: docker_info
+  changed_when: false
+  failed_when: docker_info.rc != 0
+  tags:
+    - docker
+
+- name: Validate Docker Compose plugin is installed
+  command: docker compose version
+  register: docker_compose_version
+  changed_when: false
+  failed_when: docker_compose_version.rc != 0
+  tags:
+    - docker
+
+- name: Confirm Docker and Docker Compose are ready
+  debug:
+    msg: "✅ Docker and Docker Compose are successfully installed and validated! 🚀"
+  when:
+    - docker_info.rc == 0
+    - docker_compose_version.rc == 0
+  tags:
+    - docker

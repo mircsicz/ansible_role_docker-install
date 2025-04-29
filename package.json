@@ -1,0 +1,11 @@
+{
+  "name": "semantic-release-demo",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "semantic-release": "semantic-release"
+  },
+  "devDependencies": {
+    "semantic-release": "^23.0.0"
+  }
+}

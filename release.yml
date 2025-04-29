@@ -1,0 +1,50 @@
+---
+- name: Create a GitHub Release
+  hosts: localhost
+  connection: local
+  gather_facts: no
+
+  vars:
+    github_api_token: "{{ lookup('env', 'GITHUB_TOKEN') }}"
+    github_repo: "mircoschmidt/docker_install"  # Format: username/repo
+    github_tag: "v1.0.0"
+    release_name: "Docker Install Role v1.0.0"
+    release_body: |
+      # 📦 Docker Install Role - v1.0.0
+      
+      First stable release of the `docker_install` Ansible role!
+
+      ## ✨ Features
+      - Installation of Docker and Docker Compose plugin.
+      - Validation of Docker (`docker info`) and Docker Compose (`docker compose version`).
+      - Docker service automatically restarted and enabled.
+      - Success message after installation.
+      - Compatible with Ubuntu 20.04, 22.04, 24.04.
+      - Ansible Galaxy compatible metadata.
+      - Clean `.gitignore` and full documentation.
+
+      ## 📢 Notes
+      - Default user is `ansible`.
+      - Only supports modern Docker setups with Compose v2.
+
+  tasks:
+    - name: Create GitHub Release
+      uri:
+        url: "https://api.github.com/repos/{{ github_repo }}/releases"
+        method: POST
+        headers:
+          Authorization: "token {{ github_api_token }}"
+          Accept: "application/vnd.github.v3+json"
+        body_format: json
+        body:
+          tag_name: "{{ github_tag }}"
+          target_commitish: "main"
+          name: "{{ release_name }}"
+          body: "{{ release_body }}"
+          draft: false
+          prerelease: false
+      register: github_release
+
+    - name: Debug output
+      debug:
+        var: github_release

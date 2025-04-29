@@ -1,0 +1,30 @@
+# Ansible related
+*.retry
+
+# Editor & OS files
+*.swp
+*.swo
+*.bak
+*.tmp
+*.DS_Store
+Thumbs.db
+
+# SSH keys or sensitive files
+*.pem
+*.key
+*.crt
+*.asc
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# Logs and dumps
+*.log
+
+# Backup files
+*~
+
+# Temporary archives
+*.tar.gz
+*.zip
