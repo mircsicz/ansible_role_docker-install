@@ -1,0 +1,25 @@
+name: Debug GH_TOKEN validity
+
+on:
+  workflow_dispatch:  # manuell auslösbar über die GitHub-Weboberfläche
+
+jobs:
+  token-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Token Identity
+        run: |
+          echo "🔐 Checking GH_TOKEN via GitHub API..."
+          curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" https://api.github.com/user \
+            | jq '{login, id, html_url, type}'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+      - name: Check Repo Access
+        run: |
+          echo "📦 Checking repo access for mircsicz/ansible_role_docker-install..."
+          curl -s -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+            https://api.github.com/repos/mircsicz/ansible_role_docker-install \
+            | jq '{full_name, permissions, private}'
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
