@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Load token from .env file (must be in .gitignore!)
+# Load .env variables
 if [ -f .env ]; then
   export $(grep -v '^#' .env | xargs)
 else
@@ -8,11 +8,18 @@ else
   exit 1
 fi
 
-# Check that token exists
+# Check token
 if [ -z "$GITHUB_TOKEN" ]; then
   echo "❌ GITHUB_TOKEN is not set. Check your .env file."
   exit 1
 fi
 
-echo "🚀 Running semantic-release..."
-npx semantic-release
+# Dry-run logic
+if [[ "$1" == "--dry-run" ]]; then
+  echo "🔍 Running semantic-release in dry-run mode..."
+  echo "📄 Output will be written to dryrun.log"
+  npx semantic-release --dry-run | tee dryrun.log
+else
+  echo "🚀 Running semantic-release (real mode)..."
+  npx semantic-release
+fi
