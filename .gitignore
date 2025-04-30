@@ -3,6 +3,10 @@
 # Ansible related
 *.retry
 
+# Tasks
+taskfile.local.yml
+.taskfiles.yml
+
 # Editor & OS files
 *.swp
 *.swo
@@ -20,6 +24,9 @@ Thumbs.db
 # Python cache files
 __pycache__/
 *.pyc
+
+# Node
+node_modules
 
 # Logs and dumps
 *.log

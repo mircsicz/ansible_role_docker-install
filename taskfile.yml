@@ -1,0 +1,232 @@
+version: '3'
+
+vars:
+  VERSION_LOG: dryrun.log
+
+tasks:
+
+  release:dry-run:
+    desc: Run semantic-release in dry-run mode and log output
+    cmds:
+      - |
+        if [ ! -f .env ]; then
+          echo "❌ .env file not found. Please create one with GITHUB_TOKEN=..."
+          exit 1
+        fi
+        export $(grep -v '^#' .env | xargs)
+        echo "🔍 Running dry-run..."
+        npx semantic-release --dry-run | tee {{.VERSION_LOG}}
+
+  release:parse-version:
+    desc: Parse next version from dryrun.log
+    cmds:
+      - |
+        if [ ! -f {{.VERSION_LOG}} ]; then
+          echo "❌ {{.VERSION_LOG}} not found. Run release:dry-run first."
+          exit 1
+        fi
+        VERSION=$(grep -Eo "The next release version is [v0-9]+\.[0-9]+\.[0-9]+" {{.VERSION_LOG}} | tail -1 | awk '{ print $6 }')
+        if [ -n "$VERSION" ]; then
+          echo "✅ Next version: $VERSION"
+        else
+          echo "⚠️ Could not extract version."
+        fi
+
+  release:tag:
+    desc: Create and push Git tag from parsed version
+    cmds:
+      - |
+        VERSION=$(grep -Eo "The next release version is [v0-9]+\.[0-9]+\.[0-9]+" {{.VERSION_LOG}} | tail -1 | awk '{ print $6 }')
+        if [ -z "$VERSION" ]; then
+          echo "❌ No version found. Run release:dry-run first."
+          exit 1
+        fi
+        echo "🏷️ Tagging $VERSION"
+        git tag "$VERSION"
+        git push origin "$VERSION"
+
+  release:changelog:
+    desc: Generate or update CHANGELOG.md from git tags
+    cmds:
+      - |
+        if ! command -v conventional-changelog &> /dev/null; then
+          echo "⚠️ 'conventional-changelog' not installed."
+          read -p "👉 Install now via npm? [y/N]: " confirm
+          if [[ "$confirm" =~ ^[Yy]$ ]]; then
+            npm install -g conventional-changelog-cli
+          else
+            echo "❌ Aborted."
+            exit 1
+          fi
+        fi
+        conventional-changelog -p angular -i CHANGELOG.md -s -r 0
+        echo "✅ CHANGELOG.md updated."
+
+  release:all:
+    desc: Run full release sequence (dry-run → parse → tag → changelog)
+    deps:
+      - release:dry-run
+      - release:parse-version
+      - release:tag
+      - release:changelog
+  
+  release:debug-token:
+    desc: Run semantic-release locally with current GITHUB_TOKEN to test token permissions
+    cmds:
+      - |
+        if [ ! -f .env ]; then
+          echo "❌ .env file not found. Please create one with GITHUB_TOKEN=..."
+          exit 1
+        fi
+        export $(grep -v '^#' .env | xargs)
+        echo "🔐 Testing semantic-release with token: $GITHUB_TOKEN"
+        npx semantic-release --dry-run || echo "❌ Token test failed."
+
+  release:whoami:
+    desc: Show GitHub user and repo info using GITHUB_TOKEN
+    cmds:
+      - |
+        if [ ! -f .env ]; then
+          echo "❌ .env file not found. Please create one with GITHUB_TOKEN=..."
+          exit 1
+        fi
+        export $(grep -v '^#' .env | xargs)
+
+        echo "🔐 Using GITHUB_TOKEN: checking identity..."
+        curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user | jq '{login, id, html_url}'
+        
+        echo "📦 Listing accessible repos..."
+        curl -s -H "Authorization: token $GITHUB_TOKEN" https://api.github.com/user/repos?per_page=100 | jq '.[].full_name'
+
+  setup.dependencies:
+    desc: Install project dependencies (semantic-release + changelog-cli)
+    cmds:
+      - |
+        if ! command -v node &> /dev/null; then
+          echo "❌ Node.js is not installed. Please install Node.js first."
+          exit 1
+        fi
+
+        echo "📦 Installing semantic-release..."
+        npm install --save-dev semantic-release
+
+        if ! command -v conventional-changelog &> /dev/null; then
+          echo "📦 Installing conventional-changelog-cli globally..."
+          npm install -g conventional-changelog-cli
+        else
+          echo "✅ conventional-changelog-cli already installed."
+        fi
+
+        echo "✅ Dependency setup complete."
+
+  setup.env:
+    desc: Create or update .env file with GITHUB_TOKEN
+    cmds:
+      - |
+        echo "🔧 Setting up .env with GITHUB_TOKEN"
+
+        if [ -f .env ]; then
+          echo "⚠️  .env already exists."
+          read -p "👉 Overwrite existing .env file? [y/N]: " overwrite
+          if [[ ! "$overwrite" =~ ^[Yy]$ ]]; then
+            echo "❌ Aborted."
+            exit 0
+          fi
+        fi
+
+        read -s -p "🔐 Enter your GitHub Token: " token
+        echo ""
+        echo "GITHUB_TOKEN=$token" > .env
+
+        echo "✅ .env created/updated."
+        echo "📂 Contents (masked):"
+        echo "GITHUB_TOKEN=ghp_$(echo "$token" | cut -c5-8)****$(echo "$token" | rev | cut -c1-4 | rev)"
+
+  setup.npm:
+    desc: Initialize package.json and install semantic-release
+    cmds:
+      - |
+        if ! command -v node &> /dev/null; then
+          echo "❌ Node.js is not installed. Please install Node.js first."
+          exit 1
+        fi
+
+        if [ ! -f package.json ]; then
+          echo "📦 Creating package.json..."
+          npm init -y > /dev/null
+        else
+          echo "📦 package.json already exists."
+        fi
+
+        echo "📦 Installing semantic-release..."
+        npm install --save-dev semantic-release
+
+        if ! command -v conventional-changelog &> /dev/null; then
+          echo "📦 Installing conventional-changelog-cli globally..."
+          npm install -g conventional-changelog-cli
+        else
+          echo "✅ conventional-changelog-cli already installed."
+        fi
+
+        echo "✅ NPM setup complete."
+
+  setup.verify:
+    desc: Verify environment, tools, token and project config
+    cmds:
+      - |
+        echo "🔍 Verifying environment..."
+
+        echo "🔧 Node.js:"
+        node -v || echo "❌ Node.js not found"
+
+        echo "📦 npm:"
+        npm -v || echo "❌ npm not found"
+
+        echo "📦 semantic-release:"
+        npx semantic-release --version || echo "❌ semantic-release not installed"
+
+        echo "📦 conventional-changelog-cli:"
+        if command -v conventional-changelog &> /dev/null; then
+          echo "✅ conventional-changelog-cli installed"
+        else
+          echo "❌ conventional-changelog-cli missing"
+        fi
+
+        echo "📂 .env file:"
+        if [ -f .env ]; then
+          echo "✅ .env found"
+        else
+          echo "❌ .env missing"
+        fi
+
+        echo "📦 package.json:"
+        if [ -f package.json ]; then
+          echo "✅ package.json found"
+        else
+          echo "❌ package.json missing"
+        fi
+
+  setup.clean:
+    desc: Remove local config and node_modules for clean start
+    cmds:
+      - |
+        echo "🧼 Cleaning project..."
+        rm -f .env
+        rm -rf node_modules
+        rm -f package-lock.json
+        rm -f dryrun.log
+        echo "✅ Clean complete."
+
+  setup.all:
+    desc: Run full setup (env + npm + dependencies + verify)
+    deps:
+      - setup.env
+      - setup.npm
+      - setup.dependencies
+      - setup.verify
+
+  setup.minimal:
+    desc: Minimal setup (env + verify only)
+    deps:
+      - setup.env
+      - setup.verify
