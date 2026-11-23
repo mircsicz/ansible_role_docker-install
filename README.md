@@ -2,7 +2,7 @@
 
 [![Release](https://img.shields.io/github/v/release/mircsicz/ansible_role_docker-install?sort=semver)](https://github.com/mircsicz/ansible_role_docker-install/releases)
 
-This Ansible role installs and configures Docker and the Docker Compose plugin on an Debian/Ubuntu system.
+This Ansible role installs and configures Docker and the Docker Compose plugin on a Debian or Ubuntu system.
 
 ## Features
 
@@ -16,8 +16,9 @@ This Ansible role installs and configures Docker and the Docker Compose plugin o
 
 ## Requirements
 
-- Debian 12 (Bookworm) or
-- Ubuntu 20.04 (Focal), 22.04 (Jammy), or 24.04 (Noble)
+- Debian 12 (Bookworm) or 13 (Trixie), or
+- Ubuntu 22.04 (Jammy) or 24.04 (Noble)
+- amd64, arm64 or armhf (the Docker repository follows the host's distribution, release and architecture)
 - Root privileges (become: true)
 - The `ansible` user should exist (or adjust accordingly)
 

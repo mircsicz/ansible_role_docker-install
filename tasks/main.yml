@@ -1,4 +1,19 @@
 ---
+- name: Validate target platform
+  assert:
+    that:
+      - ansible_facts.distribution in ['Debian', 'Ubuntu']
+    fail_msg: "docker_install supports Debian and Ubuntu only."
+  tags:
+    - docker
+
+- name: Resolve Docker repository parameters
+  set_fact:
+    docker_install_distro: "{{ ansible_facts.distribution | lower }}"
+    docker_install_arch: "{{ {'x86_64': 'amd64', 'aarch64': 'arm64', 'armv7l': 'armhf'}[ansible_facts.architecture] | default(ansible_facts.architecture) }}"
+  tags:
+    - docker
+
 - name: Install Docker prerequisite packages
   apt:
     name: "{{ item }}"
@@ -9,13 +24,20 @@
     - ca-certificates
     - vim-nox
     - curl
-    - software-properties-common
+  tags:
+    - docker
+
+- name: Ensure apt keyrings directory exists
+  file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: '0755'
   tags:
     - docker
 
 - name: Add Docker signing key (GPG)
   get_url:
-    url: https://download.docker.com/linux/ubuntu/gpg
+    url: "https://download.docker.com/linux/{{ docker_install_distro }}/gpg"
     dest: /etc/apt/keyrings/docker.asc
     mode: '0644'
     force: true
@@ -24,7 +46,7 @@
 
 - name: Add Docker repository
   apt_repository:
-    repo: deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu noble stable
+    repo: "deb [arch={{ docker_install_arch }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ docker_install_distro }} {{ ansible_facts.distribution_release }} stable"
     state: present
   tags:
     - docker
